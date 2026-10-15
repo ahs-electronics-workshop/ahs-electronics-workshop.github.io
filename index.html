@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electronics Workshop — Practice</title>
+<style>
+:root{
+  --bg:#f4f6f6; --panel:#fff; --ink:#15201f; --ink-soft:#5c6b6a;
+  --rule:#d8dedd; --led:#d98324;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#101615; --panel:#19211f; --ink:#e6edec; --ink-soft:#93a3a1;
+  --rule:#2c3a37; --led:#e8a24a; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);line-height:1.55;
+  padding:40px 16px 56px;-webkit-text-size-adjust:100%}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1{font-size:1.6rem;font-weight:700;margin:0;letter-spacing:-.01em}
+.sub{color:var(--ink-soft);font-size:.95rem;margin:6px 0 0}
+h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);
+  margin:0 0 10px;font-family:var(--mono)}
+.list{display:flex;flex-direction:column;gap:10px}
+a.card{display:flex;flex-direction:column;gap:3px;text-decoration:none;color:inherit;
+  background:var(--panel);border:1px solid var(--rule);border-left:4px solid var(--led);
+  border-radius:8px;padding:14px 16px}
+a.card:hover{border-color:var(--led)}
+a.card:focus-visible{outline:2px solid var(--led);outline-offset:2px}
+.name{font-weight:600}
+.desc{font-size:.88rem;color:var(--ink-soft)}
+footer{font-size:.82rem;color:var(--ink-soft);border-top:1px solid var(--rule);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Electronics Workshop</h1>
+    <p class="sub">Practice pages for the XIAO microcontroller unit. Work through them in the browser &mdash; nothing is submitted or graded here.</p>
+  </header>
+  <section>
+    <h2>Python Moments</h2>
+    <div class="list">
+      <a class="card" href="loop-bench.html">
+        <span class="name">#2 &mdash; Loops with <code>not</code> and <code>or</code></span>
+        <span class="desc">Toggling, counting with a wrap&#8209;around, and reversing direction. Three questions with trace tables.</span>
+      </a>
+    </div>
+  </section>
+  <footer>Albany High School &middot; Electronics Workshop</footer>
+</div>
+</body>
+</html>
