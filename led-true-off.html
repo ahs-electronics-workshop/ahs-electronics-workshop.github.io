@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Moment #3: Why True turns the LED off</title>
+<style>
+:root{
+  --bg:#f4f6f6; --panel:#fff; --ink:#15201f; --ink-soft:#5c6b6a;
+  --rule:#d8dedd; --led:#d98324; --ok:#1f7a5c; --code-bg:#eef1f1;
+  --wire:#3a4a48; --high:#c4372b; --low:#2f6fb5; --glow:#ff3b30; --glowsoft:rgba(255,59,48,.28); --water:#3d8ed8;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#101615; --panel:#19211f; --ink:#e6edec; --ink-soft:#93a3a1;
+  --rule:#2c3a37; --led:#e8a24a; --ok:#49b48c; --code-bg:#121917;
+  --wire:#b9c6c4; --high:#ff6b5e; --low:#6ea8ff; --glow:#ff4d42; --glowsoft:rgba(255,77,66,.32); --water:#5aa6f0;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);line-height:1.55;
+  padding:28px 16px 56px;-webkit-text-size-adjust:100%}
+.wrap{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+header{display:flex;flex-direction:column;gap:8px}
+.back{font-size:.85rem;color:var(--ink-soft);text-decoration:none}
+.back:hover{color:var(--ink)}
+.kicker{font-family:var(--mono);font-size:.78rem;color:var(--led);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+h1{font-size:clamp(1.6rem,4.5vw,2.3rem);font-weight:800;margin:0;letter-spacing:-.01em;line-height:1.15}
+h2{font-size:1.3rem;margin:0}
+p{margin:0;max-width:66ch}
+.answer{font-size:1.1rem}
+.answer b{color:var(--high)}
+code{font-family:var(--mono);font-size:.92em}
+pre{font-family:var(--mono);font-size:.9rem;background:var(--code-bg);border:1px solid var(--rule);
+  border-radius:6px;padding:12px 14px;margin:0;overflow-x:auto;line-height:1.55}
+.c{color:var(--ink-soft)}
+section{display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:20px;min-width:0}
+
+/* Interactive circuit */
+.lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:center;border-left:4px solid var(--led)}
+@media (max-width:720px){.lab{grid-template-columns:1fr}}
+.controls{display:flex;flex-direction:column;gap:14px;min-width:0}
+.codeline{font-size:clamp(1.05rem,3vw,1.35rem);font-weight:600}
+.codeline .val{color:var(--led)}
+.toggle{display:flex;gap:10px;flex-wrap:wrap}
+.toggle button{font:600 1.05rem var(--mono);padding:10px 18px;border-radius:8px;border:2px solid var(--rule);
+  background:var(--bg);color:var(--ink);cursor:pointer;min-width:104px}
+.toggle button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.toggle button:focus-visible,.reveal:focus-visible{outline:3px solid var(--led);outline-offset:3px}
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:.98rem}
+.readout dt{color:var(--ink-soft)}
+.readout dd{margin:0;font-weight:700;font-family:var(--mono)}
+.verdict{font-size:1.35rem;font-weight:800;line-height:1.25}
+.verdict.on{color:var(--high)} .verdict.off{color:var(--ink-soft)}
+.diagram{min-width:0;overflow-x:auto}
+svg{display:block;width:100%;height:auto}
+.circ{max-width:400px;margin:0 auto}
+.w{stroke:var(--wire);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.lbl{fill:var(--ink);font-family:var(--ui);font-size:15px}
+.lbl-s{fill:var(--ink-soft);font-family:var(--ui);font-size:13px}
+.v-high{fill:var(--high);font-family:var(--mono);font-weight:700;font-size:16px}
+.v-low{fill:var(--low);font-family:var(--mono);font-weight:700;font-size:16px}
+.chip{fill:var(--bg);stroke:var(--wire);stroke-width:2}
+.led-body{fill:var(--bg);stroke:var(--wire);stroke-width:3;transition:fill .25s}
+.led-on .led-body{fill:var(--glow)}
+.halo{fill:var(--glowsoft);opacity:0;transition:opacity .25s}
+.led-on .halo{opacity:1}
+.flow{stroke:var(--glow);stroke-width:4;fill:none;stroke-dasharray:2 14;stroke-linecap:round;opacity:0}
+.led-on .flow{opacity:1;animation:run 1s linear infinite}
+@keyframes run{to{stroke-dashoffset:-16}}
+@media (prefers-reduced-motion:reduce){.led-on .flow{animation:none;stroke-dasharray:none;opacity:.55}}
+
+/* Water */
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.card{display:flex;flex-direction:column;gap:10px}
+.card h3{margin:0;font-family:var(--mono);font-size:1rem}
+.tank{fill:var(--bg);stroke:var(--wire);stroke-width:2}
+.water{fill:var(--water)}
+.pipe-flow{stroke:var(--water);stroke-width:6;fill:none;stroke-dasharray:6 8}
+.on-txt{color:var(--high);font-weight:700}
+.off-txt{color:var(--ink-soft);font-weight:700}
+
+/* Predict */
+.q{border-left:4px solid var(--rule);display:flex;flex-direction:column;gap:12px}
+.qnum{font-family:var(--mono);font-size:.78rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.07em}
+.qask{font-weight:600;margin:0}
+.reveal{align-self:flex-start;font:600 .95rem var(--ui);padding:8px 14px;border-radius:8px;border:1px solid var(--rule);
+  background:var(--bg);color:var(--ink);cursor:pointer}
+.ans{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--rule);flex:none}
+
+/* Cheat sheet */
+.tablewrap{overflow-x:auto;padding:0}
+table{border-collapse:collapse;width:100%;font-size:.98rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);font-family:var(--mono)}
+tr:last-child td{border-bottom:0}
+.note{color:var(--ink-soft);font-size:.92rem}
+footer{font-size:.82rem;color:var(--ink-soft);border-top:1px solid var(--rule);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="index.html">&larr; Electronics Workshop</a>
+    <span class="kicker">Python Moment #3 &middot; XIAO nRF52840 onboard LED</span>
+    <h1>Why does <code>True</code> turn the LED off?</h1>
+    <p class="answer">Because <code>True</code> doesn't mean "on". It means <b>put 3.3 volts on the pin</b>. The onboard LED is already connected to 3.3&nbsp;V on its other side, so when the pin is also at 3.3&nbsp;V there's no push to make electricity flow through it.</p>
+  </header>
+
+  <section>
+    <h2>The code you've been writing</h2>
+    <pre><span class="c"># make the red LED something we can control</span>
+ledR = digitalio.DigitalInOut(board.LED_RED)
+ledR.direction = digitalio.Direction.OUTPUT
+
+ledR.value = True     <span class="c"># red is OFF</span>
+ledR.value = False    <span class="c"># red is ON</span></pre>
+    <p>Backwards? Try it below and watch what <code>True</code> and <code>False</code> do to the voltage.</p>
+  </section>
+
+  <div class="panel lab" id="lab">
+    <div class="controls">
+      <span class="kicker">Try it: flip the code</span>
+      <pre class="codeline" aria-live="polite">ledR.value = <span class="val" id="codeval">True</span></pre>
+      <div class="toggle" role="group" aria-label="Set ledR.value">
+        <button type="button" id="btnTrue" aria-pressed="true">True</button>
+        <button type="button" id="btnFalse" aria-pressed="false">False</button>
+      </div>
+      <dl class="readout">
+        <dt>Top of LED</dt><dd style="color:var(--high)">3.3 V (always)</dd>
+        <dt>Pin voltage</dt><dd id="pinv">3.3 V</dd>
+        <dt>Difference</dt><dd id="diff">0 V</dd>
+      </dl>
+      <div class="verdict off" id="verdict">No difference → no flow → LED OFF</div>
+    </div>
+    <div class="diagram">
+      <svg viewBox="0 0 360 430" class="circ" role="img" aria-labelledby="ctitle">
+        <title id="ctitle">The onboard LED: 3.3 volts on top, through a resistor and the LED, down to the LED_RED pin on the chip.</title>
+        <line class="w" x1="120" y1="40" x2="240" y2="40"/>
+        <text class="v-high" x="180" y="28" text-anchor="middle">+3.3 V</text>
+        <text class="lbl-s" x="250" y="45">power, always on</text>
+        <line class="w" x1="180" y1="40" x2="180" y2="80"/>
+        <polyline class="w" points="180,80 166,90 194,104 166,118 194,132 166,146 180,156"/>
+        <text class="lbl-s" x="206" y="122">resistor</text>
+        <text class="lbl-s" x="206" y="138">(limits current)</text>
+        <line class="w" x1="180" y1="156" x2="180" y2="196"/>
+        <g id="ledg">
+          <circle class="halo" cx="180" cy="226" r="46"/>
+          <polygon class="led-body" points="155,200 205,200 180,246"/>
+          <line class="w" x1="155" y1="248" x2="205" y2="248"/>
+          <text class="lbl" x="218" y="222">LED</text>
+          <text class="lbl-s" x="218" y="239">+ on top, − on bottom</text>
+          <path class="flow" d="M180,44 L180,80 L166,90 L194,104 L166,118 L194,132 L166,146 L180,156 L180,350"/>
+        </g>
+        <line class="w" x1="180" y1="248" x2="180" y2="350"/>
+        <rect class="chip" x="70" y="350" width="220" height="62" rx="8"/>
+        <text class="lbl" x="180" y="376" text-anchor="middle">LED_RED pin on the chip</text>
+        <text id="pinlabel" class="v-high" x="180" y="398" text-anchor="middle">set HIGH → 3.3 V</text>
+        <text class="lbl-s" x="36" y="190">top side</text>
+        <text class="v-high" x="36" y="207">3.3 V</text>
+        <text class="lbl-s" x="36" y="260">bottom side</text>
+        <text id="bottag" class="v-high" x="36" y="277">3.3 V</text>
+      </svg>
+    </div>
+  </div>
+
+  <section>
+    <h2>Think of voltage as water height</h2>
+    <p>Water only flows from high to low. The LED is a little water wheel in the pipe: it only spins when water is moving.</p>
+    <div class="two">
+      <div class="panel card">
+        <h3>ledR.value = True</h3>
+        <svg viewBox="0 0 300 170" role="img" aria-label="Two water tanks at the same height. No water flows and the wheel stays still.">
+          <rect class="tank" x="20" y="20" width="80" height="120"/><rect class="water" x="22" y="40" width="76" height="98"/>
+          <rect class="tank" x="200" y="20" width="80" height="120"/><rect class="water" x="202" y="40" width="76" height="98"/>
+          <line class="w" x1="100" y1="120" x2="200" y2="120"/>
+          <circle cx="150" cy="120" r="14" fill="var(--bg)" stroke="var(--wire)" stroke-width="2"/>
+          <text class="lbl-s" x="60" y="160" text-anchor="middle">3.3 V side</text>
+          <text class="lbl-s" x="240" y="160" text-anchor="middle">pin at 3.3 V</text>
+          <text class="lbl-s" x="150" y="100" text-anchor="middle">LED</text>
+        </svg>
+        <p><span class="off-txt">Same height on both sides.</span> Nothing flows, so the LED stays dark.</p>
+      </div>
+      <div class="panel card">
+        <h3>ledR.value = False</h3>
+        <svg viewBox="0 0 300 170" role="img" aria-label="Left tank full, right tank empty. Water flows through the pipe and spins the wheel.">
+          <rect class="tank" x="20" y="20" width="80" height="120"/><rect class="water" x="22" y="40" width="76" height="98"/>
+          <rect class="tank" x="200" y="20" width="80" height="120"/><rect class="water" x="202" y="128" width="76" height="10"/>
+          <line class="pipe-flow" x1="100" y1="120" x2="200" y2="120"/>
+          <circle cx="150" cy="120" r="14" fill="var(--glow)" stroke="var(--wire)" stroke-width="2"/>
+          <text class="lbl-s" x="60" y="160" text-anchor="middle">3.3 V side</text>
+          <text class="lbl-s" x="240" y="160" text-anchor="middle">pin at 0 V</text>
+          <text class="lbl-s" x="150" y="100" text-anchor="middle">LED</text>
+        </svg>
+        <p><span class="on-txt">High on one side, low on the other.</span> Electricity flows through the LED and it lights up.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Make your code read the right way</h2>
+    <p>Give the two values names that say what they do. Then the rest of your program reads like English.</p>
+    <pre>ON, OFF = False, True    <span class="c"># onboard LED is backwards (active-low)</span>
+
+ledR.value = OFF          <span class="c"># start dark</span>
+ledG.value = ON           <span class="c"># green on</span></pre>
+  </section>
+
+  <section>
+    <h2>Predict the color</h2>
+    <p>The onboard LED has three colors inside it. Turn on more than one and they mix. Decide your answer before you reveal it.</p>
+    <div class="panel q">
+      <span class="qnum">Question 1</span>
+      <pre>ledR.value = False
+ledG.value = True
+ledB.value = True</pre>
+      <p class="qask">What color is the LED?</p>
+      <button type="button" class="reveal" data-target="a1">Reveal</button>
+      <div class="ans" id="a1" hidden><span class="dot" style="background:#ff3b30"></span><span><b>Red.</b> Only red is <code>False</code>, so only red is on.</span></div>
+    </div>
+    <div class="panel q">
+      <span class="qnum">Question 2</span>
+      <pre>ledR.value = False
+ledG.value = False
+ledB.value = True</pre>
+      <p class="qask">What color is the LED?</p>
+      <button type="button" class="reveal" data-target="a2">Reveal</button>
+      <div class="ans" id="a2" hidden><span class="dot" style="background:#ffd60a"></span><span><b>Yellow.</b> Red and green are both on, and red + green light mix to yellow.</span></div>
+    </div>
+    <div class="panel q">
+      <span class="qnum">Question 3</span>
+      <pre>ledR.value = True
+ledG.value = True
+ledB.value = True</pre>
+      <p class="qask">What color is the LED?</p>
+      <button type="button" class="reveal" data-target="a3">Reveal</button>
+      <div class="ans" id="a3" hidden><span class="dot" style="background:transparent"></span><span><b>Off.</b> Every pin is at 3.3&nbsp;V, so nothing flows. This is how most programs start.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cheat sheet: which way is "on"?</h2>
+    <div class="panel tablewrap">
+      <table>
+        <thead><tr><th>LED</th><th>How it's wired</th><th>True</th><th>False</th></tr></thead>
+        <tbody>
+          <tr><td><b>Onboard XIAO LED</b><br><span class="note">LED_RED, LED_GREEN, LED_BLUE</span></td><td>3.3 V → LED → pin</td><td class="off-txt">off</td><td class="on-txt">on</td></tr>
+          <tr><td><b>An LED you wire yourself</b><br><span class="note">pin → resistor → LED → GND</span></td><td>pin → LED → ground</td><td class="on-txt">on</td><td class="off-txt">off</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Engineers call the onboard one <b>active-low</b>: it does its job when the pin goes low. Not sure which kind you have? Set the pin to <code>False</code>, then to <code>True</code>, and watch which one lights it.</p>
+  </section>
+
+  <footer>Albany High School &middot; Electronics Workshop</footer>
+</div>
+
+<script>
+(function(){
+  var g=document.getElementById('ledg'), codeval=document.getElementById('codeval'),
+      pinv=document.getElementById('pinv'), diff=document.getElementById('diff'),
+      verdict=document.getElementById('verdict'), pinlabel=document.getElementById('pinlabel'),
+      bottag=document.getElementById('bottag'), bT=document.getElementById('btnTrue'), bF=document.getElementById('btnFalse');
+  function set(val){
+    codeval.textContent = val ? 'True' : 'False';
+    bT.setAttribute('aria-pressed', String(val)); bF.setAttribute('aria-pressed', String(!val));
+    if(val){
+      g.classList.remove('led-on');
+      pinv.textContent='3.3 V'; pinv.style.color='var(--high)';
+      diff.textContent='3.3 − 3.3 = 0 V';
+      verdict.textContent='No difference → no flow → LED OFF'; verdict.className='verdict off';
+      pinlabel.textContent='set HIGH → 3.3 V'; pinlabel.setAttribute('class','v-high');
+      bottag.textContent='3.3 V'; bottag.setAttribute('class','v-high');
+    } else {
+      g.classList.add('led-on');
+      pinv.textContent='0 V'; pinv.style.color='var(--low)';
+      diff.textContent='3.3 − 0 = 3.3 V';
+      verdict.textContent='3.3 V difference → current flows → LED ON'; verdict.className='verdict on';
+      pinlabel.textContent='set LOW → 0 V'; pinlabel.setAttribute('class','v-low');
+      bottag.textContent='0 V'; bottag.setAttribute('class','v-low');
+    }
+  }
+  bT.addEventListener('click',function(){set(true)});
+  bF.addEventListener('click',function(){set(false)});
+  set(true);
+  Array.prototype.forEach.call(document.querySelectorAll('.reveal'),function(b){
+    b.addEventListener('click',function(){
+      var a=document.getElementById(b.getAttribute('data-target'));
+      a.hidden=!a.hidden; b.textContent=a.hidden?'Reveal':'Hide';
+    });
+  });
+})();
+</script>
+</body>
+</html>
