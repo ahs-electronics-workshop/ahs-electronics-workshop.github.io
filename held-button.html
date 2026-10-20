@@ -215,12 +215,12 @@ var QS = [
    ]
   },
   "opts": [
-   "2  3  1  1  off  off  2  3  3",
    "2  1  2  2  off  off  1  2  2",
    "1  2  3  3  off  off  3  1  1",
+   "2  3  1  1  off  off  2  3  3",
    "2  3  1  1  1  1  2  3  3"
   ],
-  "right": 0,
+  "right": 2,
   "why": "Holding the button speeds up the fan on <em>every</em> pass where both <code>held</code> and <code>fan_on</code> are True, and that includes the pass where the button first goes down. Speed 4 is bigger than 3, so it wraps to 1. Letting go (<code>\"up\"</code>) only changes <code>held</code>, so the speed stays where it was. The next press turns the fan off, and <code>held and fan_on</code> is False, so nothing climbs. The press after that turns it back on and picks up from the speed it remembered. The loop runs once per item in the list: 9 passes, ticks 0 to 8."
  },
  {
@@ -360,12 +360,12 @@ var QS = [
    ]
   },
   "opts": [
-   "True 100",
    "True 20",
    "True 40",
-   "False 80"
+   "False 80",
+   "True 100"
   ],
-  "right": 0,
+  "right": 3,
   "why": "The first press starts playing and the volume climbs to 60, then 80 while held. The second press pauses, so holding does nothing for four ticks. The third press plays again and adds 20 one more time: 100. Since <code>100 &gt; 100</code> is False, it does <em>not</em> wrap. The loop stops when <code>tick</code> reaches 10, the length of the list, and <code>print</code> is outside the loop, so it shows only the final values."
  }
 ];
