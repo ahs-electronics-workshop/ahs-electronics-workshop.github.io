@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Moment #4: Two booleans and a held button</title>
+<style>
+:root{
+  --bg:#f4f6f6; --panel:#fff; --ink:#15201f; --ink-soft:#5c6b6a;
+  --rule:#d8dedd; --led:#d98324; --ok:#1f7a5c; --no:#b2473a; --code-bg:#eef1f1;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#101615; --panel:#19211f; --ink:#e6edec; --ink-soft:#93a3a1;
+  --rule:#2c3a37; --led:#e8a24a; --ok:#49b48c; --no:#e0796a; --code-bg:#121917;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);line-height:1.55;
+  padding:28px 16px 56px;-webkit-text-size-adjust:100%}
+.wrap{max-width:730px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:6px}
+h1{font-size:1.55rem;font-weight:700;margin:0;letter-spacing:-.01em}
+.sub{color:var(--ink-soft);font-size:.92rem;margin:0}
+.meter{display:flex;align-items:center;gap:10px;font-size:.8rem;color:var(--ink-soft);
+  font-variant-numeric:tabular-nums;margin-top:4px}
+.lamps{display:flex;gap:6px}
+.lamp{width:12px;height:12px;border-radius:50%;background:var(--rule);
+  border:1px solid var(--rule);transition:background .25s}
+.lamp.try{background:var(--led);border-color:var(--led)}
+.lamp.got{background:var(--ok);border-color:var(--ok)}
+.q{background:var(--panel);border:1px solid var(--rule);border-radius:8px;
+  border-left:4px solid var(--rule);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.q.try{border-left-color:var(--led)} .q.got{border-left-color:var(--ok)}
+.qhead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.qnum{font-family:var(--mono);font-size:.78rem;color:var(--ink-soft);
+  text-transform:uppercase;letter-spacing:.07em}
+.qask{font-weight:600;margin:0;font-size:1rem}
+pre{font-family:var(--mono);font-size:.86rem;background:var(--code-bg);
+  border:1px solid var(--rule);border-radius:6px;padding:12px 14px;margin:0;
+  overflow-x:auto;line-height:1.5}
+code{font-family:var(--mono);font-size:.92em}
+
+/* Trace table — scratch paper. Nothing here is read or checked. */
+.tracewrap{overflow-x:auto}
+.tracelab{font-size:.82rem;color:var(--ink-soft);margin:0 0 6px}
+table.trace{border-collapse:collapse;font-family:var(--mono);font-size:.84rem;
+  font-variant-numeric:tabular-nums;min-width:100%}
+table.trace th{font-weight:600;text-align:left;padding:6px 8px;border:1px solid var(--rule);
+  background:var(--code-bg);white-space:nowrap;font-size:.8rem}
+table.trace td{padding:0;border:1px solid var(--rule)}
+table.trace td.fixed{padding:6px 8px;color:var(--ink-soft);background:var(--code-bg);
+  white-space:nowrap;text-align:center}
+table.trace input{width:100%;min-width:62px;border:0;background:transparent;color:var(--ink);
+  font-family:var(--mono);font-size:.84rem;padding:6px 8px;text-align:center}
+table.trace input:focus{outline:2px solid var(--led);outline-offset:-2px;
+  background:rgba(217,131,36,.07)}
+
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--rule);
+  border-radius:6px;background:transparent;color:inherit;text-align:left;cursor:pointer;
+  font-family:var(--mono);font-size:.86rem;white-space:pre-line;min-width:0;line-height:1.5}
+.opt:hover:not(:disabled){border-color:var(--led)}
+.opt:focus-visible{outline:2px solid var(--led);outline-offset:2px}
+.opt:disabled{cursor:default}
+.opt .tag{font-weight:700;color:var(--ink-soft);flex:none}
+.opt.right{border-color:var(--ok);background:rgba(31,122,92,.10)}
+.opt.wrong{border-color:var(--no);background:rgba(178,71,58,.10)}
+.fb{font-size:.9rem;padding:10px 12px;border-radius:6px;border:1px solid var(--rule);
+  background:var(--code-bg)}
+.fb.right{border-color:var(--ok)} .fb.wrong{border-color:var(--no)}
+.back{font-size:.85rem;color:var(--ink-soft);text-decoration:none}
+.back:hover{color:var(--ink)}
+.how{font-size:.95rem;margin:0}
+.note{font-size:.82rem;color:var(--ink-soft);border-top:1px solid var(--rule);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="index.html">&larr; Electronics Workshop</a>
+    <h1>Python Moment #4: Two booleans and a held button</h1>
+    <p class="sub">The logic behind PWM Challenge&nbsp;2: one variable remembers whether the button is held, another remembers whether the thing is on, and both have to be true before the level climbs.</p>
+    <div class="meter"><span class="lamps" id="lamps"></span><span id="tally">0 of 2 correct</span></div>
+  </header>
+  <p class="how">There's no button here, so each program reads a list instead. A <code>"down"</code> or <code>"press"</code> is the moment the button goes down, <code>"up"</code> or <code>"release"</code> is the moment it comes back up, and <code>"-"</code> means nothing new happened: the button is still in whatever position it was.</p>
+  <div id="qs"></div>
+  <p class="note">Fill in the trace table one pass at a time before you pick an answer. <b>Each table has more rows than the program needs, on purpose.</b> Part of the job is figuring out when the loop stops. Leave the extra rows blank. The table is yours; nothing in it is graded or checked.</p>
+</div>
+
+<script>
+var QS = [
+ {
+  "n": "Question 1",
+  "ask": "What does this print? (Each print is on its own line. The choices show them left to right.)",
+  "code": "inputs = [\"down\", \"-\", \"-\", \"up\", \"down\", \"up\", \"down\", \"-\", \"up\"]\nheld = False\nfan_on = False\nspeed = 1\n\nfor tick in range(len(inputs)):\n    action = inputs[tick]\n    if action == \"down\":\n        held = True\n        fan_on = not fan_on\n    if action == \"up\":\n        held = False\n    if held and fan_on:\n        speed = speed + 1\n        if speed > 3:\n            speed = 1\n    if fan_on:\n        print(speed)\n    else:\n        print(\"off\")",
+  "trace": {
+   "cols": [
+    "tick",
+    "action",
+    "held",
+    "fan_on",
+    "speed",
+    "prints"
+   ],
+   "rows": [
+    [
+     "start",
+     "—",
+     "False",
+     "False",
+     "1",
+     "—"
+    ],
+    [
+     "0",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "1",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "2",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "3",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "4",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "5",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "6",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "7",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "8",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "9",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "10",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "11",
+     null,
+     null,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "opts": [
+   "2  3  1  1  off  off  2  3  3",
+   "2  1  2  2  off  off  1  2  2",
+   "1  2  3  3  off  off  3  1  1",
+   "2  3  1  1  1  1  2  3  3"
+  ],
+  "right": 0,
+  "why": "Holding the button speeds up the fan on <em>every</em> pass where both <code>held</code> and <code>fan_on</code> are True, and that includes the pass where the button first goes down. Speed 4 is bigger than 3, so it wraps to 1. Letting go (<code>\"up\"</code>) only changes <code>held</code>, so the speed stays where it was. The next press turns the fan off, and <code>held and fan_on</code> is False, so nothing climbs. The press after that turns it back on and picks up from the speed it remembered. The loop runs once per item in the list: 9 passes, ticks 0 to 8."
+ },
+ {
+  "n": "Question 2",
+  "ask": "What does this print?",
+  "code": "buttons = [\"press\", \"-\", \"release\", \"press\", \"-\",\n           \"-\", \"-\", \"release\", \"press\", \"release\"]\nholding = False\nplaying = False\nvolume = 40\ntick = 0\n\nwhile tick < len(buttons):\n    b = buttons[tick]\n    if b == \"press\":\n        holding = True\n        playing = not playing\n    elif b == \"release\":\n        holding = False\n    if holding and playing:\n        volume = volume + 20\n        if volume > 100:\n            volume = 20\n    tick = tick + 1\n\nprint(playing, volume)",
+  "trace": {
+   "cols": [
+    "tick",
+    "b",
+    "holding",
+    "playing",
+    "volume",
+    "tick < len(buttons)?"
+   ],
+   "rows": [
+    [
+     "start",
+     "—",
+     "False",
+     "False",
+     "40",
+     "—"
+    ],
+    [
+     "0",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "1",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "2",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "3",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "4",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "5",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "6",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "7",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "8",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "9",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "10",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "11",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "12",
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    [
+     "13",
+     null,
+     null,
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "opts": [
+   "True 100",
+   "True 20",
+   "True 40",
+   "False 80"
+  ],
+  "right": 0,
+  "why": "The first press starts playing and the volume climbs to 60, then 80 while held. The second press pauses, so holding does nothing for four ticks. The third press plays again and adds 20 one more time: 100. Since <code>100 &gt; 100</code> is False, it does <em>not</em> wrap. The loop stops when <code>tick</code> reaches 10, the length of the list, and <code>print</code> is outside the loop, so it shows only the final values."
+ }
+];
+
+var qs=document.getElementById("qs"), lamps=document.getElementById("lamps"), tally=document.getElementById("tally");
+var state={};
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function traceHTML(t,qi){
+  var h='<div><p class="tracelab">Trace table &mdash; fill this in as you work through each pass:</p>'+
+        '<div class="tracewrap"><table class="trace"><thead><tr>';
+  for(var c=0;c<t.cols.length;c++) h+='<th>'+esc(t.cols[c])+'</th>';
+  h+='</tr></thead><tbody>';
+  for(var r=0;r<t.rows.length;r++){
+    h+='<tr>';
+    for(var c=0;c<t.rows[r].length;c++){
+      var v=t.rows[r][c];
+      if(v===null) h+='<td><input type="text" autocomplete="off" spellcheck="false" aria-label="'+esc(t.cols[c])+' row '+(r+1)+'"></td>';
+      else h+='<td class="fixed">'+esc(v)+'</td>';
+    }
+    h+='</tr>';
+  }
+  return h+'</tbody></table></div></div>';
+}
+
+for (var qi=0; qi<QS.length; qi++) (function(qi){
+  var q=QS[qi];
+  var d=document.createElement("section"); d.className="q"; d.id="q"+qi;
+  d.innerHTML='<div class="qhead"><span class="qnum">'+q.n+'</span><p class="qask">'+q.ask+'</p></div>'+
+    '<pre>'+esc(q.code)+'</pre>'+
+    traceHTML(q.trace,qi)+
+    '<div class="opts" id="opts'+qi+'"></div>'+
+    '<div class="fb" id="fb'+qi+'" style="display:none"></div>';
+  qs.appendChild(d);
+
+  var lamp=document.createElement("span"); lamp.className="lamp"; lamp.id="lamp"+qi; lamps.appendChild(lamp);
+
+  var box=d.querySelector("#opts"+qi);
+  for (var oi=0; oi<q.opts.length; oi++) (function(oi){
+    var b=document.createElement("button"); b.className="opt"; b.type="button";
+    b.innerHTML='<span class="tag">'+"ABCD".charAt(oi)+'</span><span>'+esc(q.opts[oi])+'</span>';
+    b.onclick=function(){pick(qi,oi);};
+    box.appendChild(b);
+  })(oi);
+})(qi);
+
+function pick(qi,oi){
+  var q=QS[qi], card=document.getElementById("q"+qi);
+  var btns=card.querySelectorAll(".opt");
+  for(var i=0;i<btns.length;i++){
+    btns[i].disabled=true;
+    if(i===q.right) btns[i].className="opt right";
+    else if(i===oi) btns[i].className="opt wrong";
+  }
+  var ok=(oi===q.right), fb=document.getElementById("fb"+qi);
+  fb.style.display=""; fb.className="fb "+(ok?"right":"wrong");
+  fb.innerHTML=(ok?"<strong>Correct.</strong> ":"<strong>Not quite.</strong> ")+q.why;
+  state[qi]=ok;
+  document.getElementById("lamp"+qi).className="lamp "+(ok?"got":"try");
+  card.className="q "+(ok?"got":"try");
+  var n=0; for(var k in state) if(state[k]) n++;
+  tally.textContent=n+" of "+QS.length+" correct";
+}
+</script>
+</body>
+</html>
